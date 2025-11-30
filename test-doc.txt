@@ -1,0 +1,21 @@
+﻿RAG Chatbot System Documentation
+
+This is a Retrieval-Augmented Generation (RAG) chatbot system built with .NET 8.
+
+Key Features:
+- Document upload support for PDF, CSV, Excel (XLSX/XLS), TXT files
+- YouTube video transcript processing
+- Vector embeddings for semantic search
+- Mock LLM responses for testing without OpenAI API key
+- Pure .NET implementation - no Python required
+- Serves frontend as static files from the same server
+
+The system uses text chunking to split documents into smaller pieces.
+Each chunk is converted to a vector embedding.
+When you ask a question, the system finds relevant chunks and generates a response.
+
+Technology Stack:
+- Backend: ASP.NET Core Web API (.NET 8)
+- Frontend: HTML, CSS, JavaScript
+- Document Processing: iText7, CsvHelper, EPPlus
+- Vector Storage: Custom in-memory FAISS-like implementation

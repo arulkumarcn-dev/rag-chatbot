@@ -1,0 +1,233 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Chatbot - AI Document Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h1>🤖 RAG Chatbot</h1>
+            <h2>Login</h2>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-field">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" placeholder="Enter username" required />
+                </div>
+                <div class="form-field">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter password" required />
+                </div>
+                <button type="submit" class="login-button">Login</button>
+            </form>
+            <div id="login-error" class="login-error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until login) -->
+    <div id="main-app" style="display: none;">
+        <header class="app-header">
+            <h1>🤖 RAG Chatbot</h1>
+            <p>AI-Powered Document Chat Assistant</p>
+            <button class="logout-button" onclick="handleLogout()">Logout</button>
+        </header>
+
+        <div class="app-container">
+        <div class="sidebar">
+            <div class="tab-navigation">
+                <button class="tab-button active" onclick="showTab('chat')" id="btn-chat">
+                    💬 Chat
+                </button>
+                <button class="tab-button" onclick="showTab('upload')" id="btn-upload">
+                    📄 Upload Document
+                </button>
+                <button class="tab-button" onclick="showTab('video')" id="btn-video">
+                    🎥 Upload Video
+                </button>
+                <button class="tab-button" onclick="showTab('manage')" id="btn-manage">
+                    🗑️ Manage Documents
+                </button>
+            </div>
+
+            <div class="session-info">
+                <p><strong>Session ID:</strong></p>
+                <p class="session-id" id="session-id">Generating...</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Chat Tab -->
+            <div id="tab-chat" class="tab-content active">
+                <div class="chat-interface">
+                    <div class="messages-container" id="messages-container">
+                        <!-- Messages will be added here -->
+                    </div>
+
+                    <form class="input-container" id="chat-form" onsubmit="sendMessage(event)">
+                        <button type="button" class="voice-button" id="voice-input-btn" onclick="toggleVoiceInput()" title="Voice Input"></button>
+                        <input
+                            type="text"
+                            id="message-input"
+                            placeholder="Ask a question... (type 'exit' to end)"
+                            autocomplete="off"
+                        />
+                        <button type="button" class="voice-button" id="voice-output-btn" onclick="toggleVoiceOutput()" title="Voice Output"></button>
+                        <button type="submit" id="send-button">Send</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Upload Document Tab -->
+            <div id="tab-upload" class="tab-content">
+                <div class="document-upload">
+                    <h2>ðŸ“„ Upload Document</h2>
+                    <p class="upload-description">
+                        Upload PDF, CSV, TXT, or image files to create your knowledge base
+                    </p>
+
+                    <form id="document-form" onsubmit="uploadDocument(event)">
+                        <div class="form-group">
+                            <label for="doc-topic">Topic / Category</label>
+                            <input
+                                type="text"
+                                id="doc-topic"
+                                placeholder="e.g., Healthcare, Data Engineering, Gen-AI"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="doc-file">Select File</label>
+                            <div class="file-input-wrapper">
+                                <input
+                                    type="file"
+                                    id="doc-file"
+                                    accept=".pdf,.csv,.txt,.png,.jpg,.jpeg"
+                                    onchange="updateFileName('doc')"
+                                />
+                                <p class="file-name" id="doc-file-name"></p>
+                            </div>
+                            <p class="file-hint">
+                                Supported formats: PDF, CSV, XLSX, XLS, TXT, PNG, JPG
+                            </p>
+                        </div>
+
+                        <button type="submit" class="upload-button" id="doc-submit">
+                            Upload & Process
+                        </button>
+                    </form>
+
+                    <div id="doc-result" class="upload-result" style="display: none;"></div>
+
+                    <div class="upload-tips">
+                        <h3>ðŸ’¡ Tips</h3>
+                        <ul>
+                            <li>Use descriptive topics to organize your documents</li>
+                            <li>Larger documents will be automatically split into chunks</li>
+                            <li>PDF files will preserve page numbers for reference</li>
+                            <li>After upload, switch to Chat tab to ask questions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Video Tab -->
+            <div id="tab-video" class="tab-content">
+                <div class="video-upload">
+                    <h2>ðŸŽ¥ Upload Video Transcript</h2>
+                    <p class="upload-description">
+                        Extract and index transcripts from YouTube videos
+                    </p>
+
+                    <form id="video-form" onsubmit="uploadVideo(event)">
+                        <div class="form-group">
+                            <label for="video-topic">Topic / Category</label>
+                            <input
+                                type="text"
+                                id="video-topic"
+                                placeholder="e.g., Healthcare, Data Engineering, Gen-AI"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="video-url">YouTube Video URL</label>
+                            <input
+                                type="text"
+                                id="video-url"
+                                placeholder="https://www.youtube.com/watch?v=..."
+                            />
+                            <p class="video-hint">
+                                The video must have captions/subtitles available
+                            </p>
+                        </div>
+
+                        <button type="submit" class="upload-button" id="video-submit">
+                            Extract & Process
+                        </button>
+                    </form>
+
+                    <div id="video-result" class="upload-result" style="display: none;"></div>
+
+                    <div class="upload-tips">
+                        <h3>ðŸ’¡ Tips</h3>
+                        <ul>
+                            <li>Works with any YouTube video that has captions</li>
+                            <li>Timestamps are preserved in the transcript</li>
+                            <li>Great for processing podcast episodes and lectures</li>
+                            <li>Processing may take a minute depending on video length</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-section">
+                        <h3>ðŸ“º Example URLs</h3>
+                        <div class="example-url">
+                            <code>https://www.youtube.com/watch?v=dQw4w9WgXcQ</code>
+                        </div>
+                        <div class="example-url">
+                            <code>https://youtu.be/dQw4w9WgXcQ</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Documents Tab -->
+            <div id="tab-manage" class="tab-content">
+                <div class="manage-documents">
+                    <h2>🗑️ Manage Documents</h2>
+                    <p class="upload-description">
+                        View and delete uploaded documents from the knowledge base
+                    </p>
+
+                    <div class="manage-actions">
+                        <button onclick="refreshDocumentList()" class="action-button refresh-button">
+                            🔄 Refresh List
+                        </button>
+                        <button onclick="confirmDeleteAll()" class="action-button delete-all-button">
+                            ⚠️ Delete All Documents
+                        </button>
+                    </div>
+
+                    <div class="documents-list" id="documents-list">
+                        <p class="loading-text">Loading documents...</p>
+                    </div>
+
+                    <div class="upload-tips">
+                        <h3>💡 Tips</h3>
+                        <ul>
+                            <li>Click on a document name to delete it</li>
+                            <li>Deleting a document removes all its chunks from the knowledge base</li>
+                            <li>"Delete All" removes all uploaded documents</li>
+                            <li>Changes take effect immediately</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
