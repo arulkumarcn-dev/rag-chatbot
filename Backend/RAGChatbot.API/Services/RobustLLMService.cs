@@ -255,6 +255,179 @@ Please answer the question based on the context provided above.";
         return null;
     }
 
+    public async Task<Models.Quiz> GenerateQuizAsync(string context, string topic, int questionCount)
+    {
+        if (_useMockMode)
+        {
+            return GenerateMockQuiz(topic, questionCount);
+        }
+
+        try
+        {
+            var systemMessage = @"You are an expert quiz generator and educator. Create multiple-choice questions based on the provided context.
+Generate questions that test understanding, not just memorization.
+You can use your knowledge to provide comprehensive explanations that go beyond the immediate context.
+Format your response as a valid JSON array of questions.";
+
+            var userMessage = $@"Based on the following content, generate {questionCount} multiple-choice questions.
+
+Content:
+{context}
+
+Please provide exactly {questionCount} questions in this JSON format:
+[
+  {{
+    ""question"": ""Question text here?"",
+    ""options"": [""Option A"", ""Option B"", ""Option C"", ""Option D""],
+    ""correctAnswerIndex"": 0,
+    ""explanation"": ""Detailed explanation of why this is the correct answer. You may include additional context from your knowledge base to help the learner understand better.""
+  }}
+]
+
+Ensure:
+1. Questions cover different aspects of the content
+2. Each question has 4 options
+3. Only one correct answer per question
+4. Explanations are comprehensive and educational:
+   - Explain why the correct answer is correct
+   - You may reference external knowledge or related concepts
+   - Provide additional context that helps understanding
+   - Include practical examples or real-world applications when relevant
+   - Mention related topics or concepts the learner should explore
+5. Questions are in the same language as the content
+6. Make explanations thorough enough that learners gain deeper understanding beyond just the answer";
+
+            var request = new
+            {
+                model = _model,
+                messages = new[]
+                {
+                    new { role = "system", content = systemMessage },
+                    new { role = "user", content = userMessage }
+                },
+                temperature = 0.7,
+                max_tokens = 3000
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(request),
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            _logger.LogInformation("Calling OpenAI API for quiz generation");
+            
+            var response = await _httpClient.PostAsync(
+                "https://api.openai.com/v1/chat/completions",
+                content
+            );
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("OpenAI API Error ({StatusCode}): {Response}", 
+                    response.StatusCode, responseBody.Substring(0, Math.Min(500, responseBody.Length)));
+                
+                return GenerateMockQuiz(topic, questionCount);
+            }
+            
+            var result = JsonSerializer.Deserialize<OpenAIChatResponse>(responseBody);
+            var quizJson = result?.Choices?[0]?.Message?.Content ?? "[]";
+
+            // Clean up the JSON response
+            quizJson = quizJson.Trim();
+            if (quizJson.StartsWith("```json"))
+            {
+                quizJson = quizJson.Substring(7);
+            }
+            if (quizJson.StartsWith("```"))
+            {
+                quizJson = quizJson.Substring(3);
+            }
+            if (quizJson.EndsWith("```"))
+            {
+                quizJson = quizJson.Substring(0, quizJson.Length - 3);
+            }
+            quizJson = quizJson.Trim();
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            
+            var questions = JsonSerializer.Deserialize<List<QuizQuestionDto>>(quizJson, options);
+
+            if (questions == null || questions.Count == 0)
+            {
+                _logger.LogError("Failed to parse quiz questions from OpenAI response");
+                return GenerateMockQuiz(topic, questionCount);
+            }
+
+            var quiz = new Models.Quiz
+            {
+                Topic = topic,
+                Questions = questions.Select((q, index) => new Models.QuizQuestion
+                {
+                    Id = index + 1,
+                    Question = q.Question,
+                    Options = q.Options,
+                    CorrectAnswerIndex = q.CorrectAnswerIndex,
+                    Explanation = q.Explanation
+                }).ToList(),
+                GeneratedAt = DateTime.UtcNow
+            };
+
+            _logger.LogInformation("✓ Successfully generated quiz with {Count} questions", quiz.Questions.Count);
+            return quiz;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating quiz, using mock");
+            return GenerateMockQuiz(topic, questionCount);
+        }
+    }
+
+    private Models.Quiz GenerateMockQuiz(string topic, int questionCount)
+    {
+        _logger.LogInformation("Generating mock quiz for topic: {Topic}", topic);
+        
+        var questions = new List<Models.QuizQuestion>();
+        
+        for (int i = 1; i <= questionCount; i++)
+        {
+            questions.Add(new Models.QuizQuestion
+            {
+                Id = i,
+                Question = $"Sample question {i} about {topic}?",
+                Options = new List<string>
+                {
+                    $"Option A for question {i}",
+                    $"Option B for question {i}",
+                    $"Option C for question {i}",
+                    $"Option D for question {i}"
+                },
+                CorrectAnswerIndex = i % 4,
+                Explanation = $"This is a mock explanation for question {i}. In a real scenario with OpenAI API configured, you would get detailed explanations with external knowledge and practical examples."
+            });
+        }
+
+        return new Models.Quiz
+        {
+            Topic = topic,
+            Questions = questions,
+            GeneratedAt = DateTime.UtcNow
+        };
+    }
+
+    private class QuizQuestionDto
+    {
+        public string Question { get; set; } = "";
+        public List<string> Options { get; set; } = new();
+        public int CorrectAnswerIndex { get; set; }
+        public string Explanation { get; set; } = "";
+    }
+
     private class OpenAIChatResponse
     {
         public List<Choice> Choices { get; set; } = new();
