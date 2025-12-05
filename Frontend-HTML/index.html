@@ -1,0 +1,336 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Chatbot - AI Document Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h1>🤖 RAG Chatbot</h1>
+            <h2>Login</h2>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-field">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" placeholder="Enter username" required />
+                </div>
+                <div class="form-field">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter password" required />
+                </div>
+                <button type="submit" class="login-button">Login</button>
+            </form>
+            <div id="login-error" class="login-error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until login) -->
+    <div id="main-app" style="display: none;">
+        <header class="app-header">
+            <h1>🤖 RAG Chatbot</h1>
+            <p>AI-Powered Document Chat Assistant</p>
+            <button class="logout-button" onclick="handleLogout()">Logout</button>
+        </header>
+
+        <div class="app-container">
+        <div class="sidebar">
+            <div class="tab-navigation">
+                <button class="tab-button active" onclick="showTab('chat')" id="btn-chat">
+                    💬 Chat
+                </button>
+                <button class="tab-button" onclick="showTab('upload')" id="btn-upload">
+                    📄 Upload Document
+                </button>
+                <button class="tab-button" onclick="showTab('video')" id="btn-video">
+                    🎥 Upload Video
+                </button>
+                <button class="tab-button" onclick="showTab('manage')" id="btn-manage">
+                    🗑️ Manage Documents
+                </button>
+                <button class="tab-button" onclick="showTab('quiz')" id="btn-quiz">
+                    📝 Quiz
+                </button>
+                <button class="tab-button" onclick="showTab('results')" id="btn-results">
+                    📊 Results
+                </button>
+            </div>
+
+            <div class="session-info">
+                <p><strong>Session ID:</strong></p>
+                <p class="session-id" id="session-id">Generating...</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Chat Tab -->
+            <div id="tab-chat" class="tab-content active">
+                <div class="chat-interface">
+                    <div class="messages-container" id="messages-container">
+                        <!-- Messages will be added here -->
+                    </div>
+
+                    <div class="language-selector">
+                        <label for="voice-language">🌐 Voice Language:</label>
+                        <select id="voice-language" onchange="setInputLanguage(this.value)" title="Select voice input language">
+                            <option value="en-US">English</option>
+                            <option value="ta-IN">தமிழ் (Tamil)</option>
+                            <option value="hi-IN">हिन्दी (Hindi)</option>
+                            <option value="te-IN">తెలుగు (Telugu)</option>
+                            <option value="ml-IN">മലയാളം (Malayalam)</option>
+                            <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
+                            <option value="bn-IN">বাংলা (Bengali)</option>
+                            <option value="gu-IN">ગુજરાતી (Gujarati)</option>
+                            <option value="pa-IN">ਪੰਜਾਬੀ (Punjabi)</option>
+                        </select>
+                    </div>
+                    
+                    <form class="input-container" id="chat-form" onsubmit="sendMessage(event)">
+                        <button type="button" class="voice-button" id="voice-input-btn" onclick="toggleVoiceInput()" title="Voice Input"></button>
+                        <input
+                            type="text"
+                            id="message-input"
+                            placeholder="Ask a question... (type 'exit' to end)"
+                            autocomplete="off"
+                        />
+                        <button type="button" class="voice-button" id="voice-output-btn" onclick="toggleVoiceOutput()" title="Voice Output"></button>
+                        <button type="submit" id="send-button">Send</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Upload Document Tab -->
+            <div id="tab-upload" class="tab-content">
+                <div class="document-upload">
+                    <h2>ðŸ“„ Upload Document</h2>
+                    <p class="upload-description">
+                        Upload PDF, CSV, TXT, or image files to create your knowledge base
+                    </p>
+
+                    <form id="document-form" onsubmit="uploadDocument(event)">
+                        <div class="form-group">
+                            <label for="doc-topic">Topic / Category</label>
+                            <input
+                                type="text"
+                                id="doc-topic"
+                                placeholder="e.g., Healthcare, Data Engineering, Gen-AI"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="doc-file">Select File</label>
+                            <div class="file-input-wrapper">
+                                <input
+                                    type="file"
+                                    id="doc-file"
+                                    accept=".pdf,.csv,.txt,.png,.jpg,.jpeg"
+                                    onchange="updateFileName('doc')"
+                                />
+                                <p class="file-name" id="doc-file-name"></p>
+                            </div>
+                            <p class="file-hint">
+                                Supported formats: PDF, CSV, XLSX, XLS, TXT, PNG, JPG
+                            </p>
+                        </div>
+
+                        <button type="submit" class="upload-button" id="doc-submit">
+                            Upload & Process
+                        </button>
+                    </form>
+
+                    <div id="doc-result" class="upload-result" style="display: none;"></div>
+
+                    <div class="upload-tips">
+                        <h3>ðŸ’¡ Tips</h3>
+                        <ul>
+                            <li>Use descriptive topics to organize your documents</li>
+                            <li>Larger documents will be automatically split into chunks</li>
+                            <li>PDF files will preserve page numbers for reference</li>
+                            <li>After upload, switch to Chat tab to ask questions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Video Tab -->
+            <div id="tab-video" class="tab-content">
+                <div class="video-upload">
+                    <h2>ðŸŽ¥ Upload Video Transcript</h2>
+                    <p class="upload-description">
+                        Extract and index transcripts from YouTube videos
+                    </p>
+
+                    <form id="video-form" onsubmit="uploadVideo(event)">
+                        <div class="form-group">
+                            <label for="video-topic">Topic / Category</label>
+                            <input
+                                type="text"
+                                id="video-topic"
+                                placeholder="e.g., Healthcare, Data Engineering, Gen-AI"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="video-url">YouTube Video URL</label>
+                            <input
+                                type="text"
+                                id="video-url"
+                                placeholder="https://www.youtube.com/watch?v=..."
+                            />
+                            <p class="video-hint">
+                                The video must have captions/subtitles available
+                            </p>
+                        </div>
+
+                        <button type="submit" class="upload-button" id="video-submit">
+                            Extract & Process
+                        </button>
+                    </form>
+
+                    <div id="video-result" class="upload-result" style="display: none;"></div>
+
+                    <div class="upload-tips">
+                        <h3>ðŸ’¡ Tips</h3>
+                        <ul>
+                            <li>Works with any YouTube video that has captions</li>
+                            <li>Timestamps are preserved in the transcript</li>
+                            <li>Great for processing podcast episodes and lectures</li>
+                            <li>Processing may take a minute depending on video length</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-section">
+                        <h3>ðŸ“º Example URLs</h3>
+                        <div class="example-url">
+                            <code>https://www.youtube.com/watch?v=dQw4w9WgXcQ</code>
+                        </div>
+                        <div class="example-url">
+                            <code>https://youtu.be/dQw4w9WgXcQ</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Documents Tab -->
+            <div id="tab-manage" class="tab-content">
+                <div class="manage-documents">
+                    <h2>🗑️ Manage Documents</h2>
+                    <p class="upload-description">
+                        View and delete uploaded documents from the knowledge base
+                    </p>
+
+                    <div class="manage-actions">
+                        <button onclick="refreshDocumentList()" class="action-button refresh-button">
+                            🔄 Refresh List
+                        </button>
+                        <button onclick="confirmDeleteAll()" class="action-button delete-all-button">
+                            ⚠️ Delete All Documents
+                        </button>
+                    </div>
+
+                    <div class="documents-list" id="documents-list">
+                        <p class="loading-text">Loading documents...</p>
+                    </div>
+
+                    <div class="upload-tips">
+                        <h3>💡 Tips</h3>
+                        <ul>
+                            <li>Click on a document name to delete it</li>
+                            <li>Deleting a document removes all its chunks from the knowledge base</li>
+                            <li>"Delete All" removes all uploaded documents</li>
+                            <li>Changes take effect immediately</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Tab -->
+            <div id="tab-quiz" class="tab-content">
+                <div class="quiz-section">
+                    <h2>📝 Quiz Generator</h2>
+                    <p class="upload-description">Generate quizzes based on your uploaded documents</p>
+
+                    <div id="quiz-generator" class="quiz-generator">
+                        <div class="form-group">
+                            <label for="quiz-topic">Select Topic / Document</label>
+                            <select id="quiz-topic" class="quiz-select">
+                                <option value="">Loading documents...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="quiz-count">Number of Questions</label>
+                            <select id="quiz-count" class="quiz-select">
+                                <option value="5">5 Questions</option>
+                                <option value="10" selected>10 Questions</option>
+                                <option value="15">15 Questions</option>
+                            </select>
+                        </div>
+                        <button onclick="generateQuiz()" class="action-button generate-quiz-btn" id="generate-quiz-btn">🎯 Generate Quiz</button>
+                    </div>
+
+                    <div id="quiz-container" class="quiz-container" style="display: none;">
+                        <div class="quiz-header">
+                            <h3 id="quiz-title">Quiz</h3>
+                            <div class="quiz-progress">
+                                <span id="quiz-progress-text">Question 1 of 10</span>
+                                <div class="progress-bar"><div id="quiz-progress-bar" class="progress-fill"></div></div>
+                            </div>
+                        </div>
+                        <div id="quiz-questions" class="quiz-questions"></div>
+                        <div class="quiz-navigation">
+                            <button onclick="previousQuestion()" id="prev-btn" class="nav-btn" disabled>⬅️ Previous</button>
+                            <button onclick="nextQuestion()" id="next-btn" class="nav-btn">Next ➡️</button>
+                            <button onclick="submitQuiz()" id="submit-btn" class="submit-btn" style="display: none;">✅ Submit Quiz</button>
+                        </div>
+                    </div>
+
+                    <div id="quiz-results-display" class="quiz-results-display" style="display: none;"></div>
+                    
+                    <div class="quiz-info-box" style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 8px;">
+                        <h4 style="margin: 0 0 10px 0; color: #1976D2;">💡 About Quiz Explanations</h4>
+                        <p style="margin: 0; color: #333; line-height: 1.6;">
+                            Our AI-powered quiz provides <strong>comprehensive explanations</strong> that may include:
+                        </p>
+                        <ul style="margin: 10px 0 0 20px; color: #333;">
+                            <li>Why the correct answer is right</li>
+                            <li>Additional context from external knowledge</li>
+                            <li>Related concepts and real-world applications</li>
+                            <li>References to broader topics for deeper learning</li>
+                        </ul>
+                        <p style="margin: 10px 0 0 0; color: #555; font-size: 0.9em;">
+                            <em>Explanations combine information from your documents with general knowledge to enhance learning.</em>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Tab -->
+            <div id="tab-results" class="tab-content">
+                <div class="results-section">
+                    <h2>📊 Quiz Results & Statistics</h2>
+                    <div class="stats-summary" id="stats-summary">
+                        <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-info"><h3 id="total-quizzes">0</h3><p>Total Quizzes</p></div></div>
+                        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-info"><h3 id="total-correct">0</h3><p>Correct Answers</p></div></div>
+                        <div class="stat-card"><div class="stat-icon">❌</div><div class="stat-info"><h3 id="total-wrong">0</h3><p>Wrong Answers</p></div></div>
+                        <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-info"><h3 id="average-score">0%</h3><p>Average Score</p></div></div>
+                    </div>
+                    <div class="results-actions">
+                        <button onclick="refreshResults()" class="action-button refresh-button">🔄 Refresh</button>
+                        <button onclick="clearAllResults()" class="action-button delete-all-button">🗑️ Clear History</button>
+                        <button onclick="exportResults()" class="action-button export-button">📥 Export Data</button>
+                    </div>
+                    <div class="quiz-history" id="quiz-history">
+                        <p class="no-results">No quiz results yet. Take a quiz to see your results here!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="voice-response.js"></script>
+</body>
+</html>
