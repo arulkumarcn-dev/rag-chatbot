@@ -1057,7 +1057,6 @@ async function loadQuizDocuments() {
 async function generateQuiz() {
     const topic = document.getElementById('quiz-topic').value;
     const count = parseInt(document.getElementById('quiz-count').value);
-    const difficulty = document.getElementById('quiz-difficulty').value;
     
     if (!topic && document.getElementById('quiz-topic').options.length <= 1) {
         showToast('Please upload documents first before generating a quiz', 'error');
