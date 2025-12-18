@@ -1126,6 +1126,9 @@ function renderQuizQuestions() {
         const optionsDiv = document.createElement('div');
         optionsDiv.className = 'quiz-options';
         
+        // Option labels: A, B, C, D
+        const optionLabels = ['A', 'B', 'C', 'D'];
+        
         q.options.forEach((option, optIndex) => {
             const optionDiv = document.createElement('div');
             optionDiv.className = 'quiz-option';
@@ -1139,7 +1142,8 @@ function renderQuizQuestions() {
             
             const label = document.createElement('label');
             label.htmlFor = `q${index}-opt${optIndex}`;
-            label.textContent = option;
+            // Add proper A, B, C, D labels before option text
+            label.textContent = `${optionLabels[optIndex]}. ${option}`;
             
             optionDiv.appendChild(radio);
             optionDiv.appendChild(label);

@@ -138,38 +138,39 @@ Provide the EXACT, COMPLETE answer from the context above. Include all relevant 
     {
         try
         {
-            var systemMessage = @"You are an expert quiz generator and educator. Create multiple-choice questions based on the provided context.
+            var systemMessage = @"You are an expert quiz generator and educator. Create clear, well-formatted multiple-choice questions based on the provided context.
 Generate questions that test understanding, not just memorization.
-You can use your knowledge to provide comprehensive explanations that go beyond the immediate context.
-Format your response as a valid JSON array of questions.";
+You can use your knowledge to provide comprehensive explanations.
+Your response must be ONLY a valid JSON array - no extra text, no markdown, no explanations outside the JSON.";
 
-            var userMessage = $@"Based on the following content, generate {questionCount} multiple-choice questions.
+            var userMessage = $@"Based on the following content, generate {questionCount} high-quality multiple-choice questions.
 
 Content:
 {context}
 
-Please provide exactly {questionCount} questions in this JSON format:
+IMPORTANT: Respond with ONLY a JSON array. No markdown, no code blocks, no extra text.
+
+Required JSON format:
 [
   {{
-    ""question"": ""Question text here?"",
-    ""options"": [""Option A"", ""Option B"", ""Option C"", ""Option D""],
+    ""question"": ""Clear, specific question text?"",
+    ""options"": [""First option"", ""Second option"", ""Third option"", ""Fourth option""],
     ""correctAnswerIndex"": 0,
-    ""explanation"": ""Detailed explanation of why this is the correct answer. You may include additional context from your knowledge base to help the learner understand better.""
+    ""explanation"": ""Detailed explanation of the correct answer with additional context.""
   }}
 ]
 
-Ensure:
-1. Questions cover different aspects of the content
-2. Each question has 4 options
-3. Only one correct answer per question
-4. Explanations are comprehensive and educational:
-   - Explain why the correct answer is correct
-   - You may reference external knowledge or related concepts
-   - Provide additional context that helps understanding
-   - Include practical examples or real-world applications when relevant
-   - Mention related topics or concepts the learner should explore
-5. Questions are in the same language as the content
-6. Make explanations thorough enough that learners gain deeper understanding beyond just the answer";
+Requirements:
+1. Each question must have EXACTLY 4 distinct options
+2. Options should be concise (not full sentences with labels)
+3. Only one correct answer per question (index 0-3)
+4. Questions cover different aspects of the content
+5. Explanations are comprehensive and educational
+6. Use the same language as the content
+7. No duplicate questions or options
+8. Make options plausible but clearly distinguishable
+
+Respond with ONLY the JSON array, nothing else.";
 
             var request = new
             {
