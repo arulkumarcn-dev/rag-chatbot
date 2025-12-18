@@ -156,39 +156,34 @@ Provide the EXACT, COMPLETE answer from the context above. Include all relevant 
 
     private async Task<Quiz> GenerateSingleBatchQuizAsync(string context, string topic, int questionCount)
     {
-        var systemMessage = @"You are an expert quiz generator and educator. Create clear, well-formatted multiple-choice questions based on the provided context.
-Generate questions that test understanding, not just memorization.
-You can use your knowledge to provide comprehensive explanations.
-Your response must be ONLY a valid JSON array - no extra text, no markdown, no explanations outside the JSON.";
+        var systemMessage = @"You are an expert quiz generator. Your ONLY job is to generate REAL multiple-choice questions from the provided document content.
 
-        var userMessage = $@"Based on the following content, generate {questionCount} high-quality multiple-choice questions.
+CRITICAL RULES:
+- Generate ACTUAL questions about the SPECIFIC content provided
+- DO NOT use placeholder text like 'sample question', 'Question 1', 'optionA'
+- DO NOT use generic examples
+- Questions must be SPECIFIC to the document content
+- Each question tests understanding of ACTUAL information from the text
+- Response must be PURE JSON array - absolutely NO markdown, NO explanations, NO extra text";
 
-Content:
+        var userMessage = $@"Generate {questionCount} multiple-choice questions from this document content:
+
 {context}
 
-IMPORTANT: Respond with ONLY a JSON array. No markdown, no code blocks, no extra text.
+REQUIREMENTS:
+1. Questions must be about SPECIFIC facts, concepts, or details from the content above
+2. Each question has EXACTLY 4 answer choices
+3. Answer choices are plain text WITHOUT labels (no 'A.', 'Option A', etc.) 
+4. One answer is correct (index 0-3)
+5. Include detailed explanation for each question
+6. Cover different sections/topics from the document
+7. Use same language as the content
+8. NO duplicate questions
 
-Required JSON format:
-[
-  {{
-    ""question"": ""Clear, specific question text?"",
-    ""options"": [""First option"", ""Second option"", ""Third option"", ""Fourth option""],
-    ""correctAnswerIndex"": 0,
-    ""explanation"": ""Detailed explanation of the correct answer with additional context.""
-  }}
-]
+JSON FORMAT (respond with ONLY this, nothing else):
+[{{""question"":""Actual specific question from content?"",""options"":[""answer choice 1"",""answer choice 2"",""answer choice 3"",""answer choice 4""],""correctAnswerIndex"":0,""explanation"":""Why this answer is correct""}}]
 
-Requirements:
-1. Each question must have EXACTLY 4 distinct options
-2. Options should be concise (not full sentences with labels)
-3. Only one correct answer per question (index 0-3)
-4. Questions cover different aspects of the content
-5. Explanations are comprehensive and educational
-6. Use the same language as the content
-7. No duplicate questions or options
-8. Make options plausible but clearly distinguishable
-
-Respond with ONLY the JSON array, nothing else.";
+DO NOT include sample/placeholder text. Generate REAL questions from the actual content provided.";
 
         var request = new
         {
@@ -198,8 +193,8 @@ Respond with ONLY the JSON array, nothing else.";
                 new { role = "system", content = systemMessage },
                 new { role = "user", content = userMessage }
             },
-            temperature = 0.7,
-            max_tokens = 3000
+            temperature = 0.8,
+            max_tokens = 4000
         };
 
         var content = new StringContent(

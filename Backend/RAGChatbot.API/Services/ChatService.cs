@@ -45,8 +45,8 @@ public class ChatService : IChatService
             // Generate embedding for the query
             var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(request.Message);
             
-            // Search for relevant chunks - get more to filter properly
-            var relevantChunks = await _vectorStore.SearchAsync(queryEmbedding, Math.Max(request.TopK * 2, 15));
+            // Search for MORE relevant chunks initially to ensure we get the right content
+            var relevantChunks = await _vectorStore.SearchAsync(queryEmbedding, 25);
             
             if (relevantChunks.Count == 0)
             {
@@ -69,25 +69,27 @@ public class ChatService : IChatService
                 .ToList();
             
             // If we filtered out too many, use original but still prefer text
-            if (textChunks.Count < 3)
+            if (textChunks.Count < 5)
             {
-                _logger.LogWarning("Few text chunks found, using all chunks");
-                textChunks = relevantChunks.Take(10).ToList();
+                _logger.LogWarning("Few text chunks found, using more chunks");
+                textChunks = relevantChunks.Where(c => c.Content.Length > 30).Take(15).ToList();
             }
             
-            // Extract FULL context from chunks - don't truncate for accuracy
-            var context = textChunks.Take(10).Select(c => c.Content).ToList();
+            // Extract FULL context from chunks - take more for better answers
+            var context = textChunks.Take(15).Select(c => c.Content).ToList();
             
-            // For numbered section queries, try to get adjacent chunks for complete context
-            if (System.Text.RegularExpressions.Regex.IsMatch(request.Message, @"\d+\.\d+"))
+            // For numbered section queries or page-specific queries, get even more context
+            if (System.Text.RegularExpressions.Regex.IsMatch(request.Message, @"\d+\.\d+|page\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
             {
-                _logger.LogInformation("Detected section number query, fetching more context");
-                // Get top 15 chunks for section queries to ensure we have complete content
-                var sectionChunks = await _vectorStore.SearchAsync(queryEmbedding, 15);
-                var textSectionChunks = sectionChunks.Where(c => !IsImageOnlyChunk(c.Content)).ToList();
-                context = textSectionChunks.Take(10).Select(c => c.Content).ToList();
+                _logger.LogInformation("Detected section/page query, fetching maximum context");
+                // Get top 20 chunks for section/page queries to ensure complete content
+                var sectionChunks = await _vectorStore.SearchAsync(queryEmbedding, 20);
+                var textSectionChunks = sectionChunks.Where(c => !IsImageOnlyChunk(c.Content) && c.Content.Length > 30).ToList();
+                context = textSectionChunks.Take(15).Select(c => c.Content).ToList();
                 textChunks = textSectionChunks;
             }
+            
+            _logger.LogInformation("Using {Count} text chunks for answer generation", context.Count);
             
             // Generate response using LLM with full context
             var response = await _llmService.GenerateResponseAsync(request.Message, context);
