@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <!-- jsPDF Library for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <!-- Login Screen -->
@@ -285,6 +287,7 @@
                     <div id="quiz-container" class="quiz-container" style="display: none;">
                         <div class="quiz-header">
                             <h3 id="quiz-title">Quiz</h3>
+                            <button onclick="downloadQuizAsPDF()" class="action-button" style="float: right; margin-top: -5px;">📄 Download as PDF</button>
                             <div class="quiz-progress">
                                 <span id="quiz-progress-text">Question 1 of 10</span>
                                 <div class="progress-bar"><div id="quiz-progress-bar" class="progress-fill"></div></div>

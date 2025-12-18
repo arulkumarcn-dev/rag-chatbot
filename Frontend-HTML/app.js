@@ -1324,6 +1324,7 @@ function displayQuizResults(correct, incorrect, total, percentage) {
             </div>
         </div>
         <div class="quiz-actions">
+            <button onclick="downloadQuizAsPDF()" class="action-button">📄 Download Quiz PDF</button>
             <button onclick="retakeQuiz()" class="action-button">🔄 Retake Quiz</button>
             <button onclick="viewResults()" class="action-button">📊 View All Results</button>
             <button onclick="backToQuizGenerator()" class="action-button">🏠 Back to Quiz Menu</button>
@@ -1490,6 +1491,173 @@ function exportResults() {
     
     URL.revokeObjectURL(url);
     showToast('Results exported successfully', 'success');
+}
+
+// ============================================
+// PDF DOWNLOAD FUNCTIONALITY
+// ============================================
+
+function downloadQuizAsPDF() {
+    if (!currentQuiz || !currentQuiz.questions || currentQuiz.questions.length === 0) {
+        showToast('No quiz available to download', 'error');
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let yPos = 20;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 20;
+        const lineHeight = 7;
+        
+        // Title
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text(currentQuiz.topic || 'Quiz', margin, yPos);
+        yPos += 10;
+        
+        // Metadata
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        const dateStr = new Date().toLocaleDateString();
+        doc.text(`Generated: ${dateStr}`, margin, yPos);
+        yPos += 5;
+        doc.text(`Total Questions: ${currentQuiz.questions.length}`, margin, yPos);
+        yPos += 10;
+        
+        // Instructions
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'italic');
+        doc.text('Instructions: Circle the correct answer for each question.', margin, yPos);
+        yPos += 10;
+        
+        // Questions
+        currentQuiz.questions.forEach((q, index) => {
+            // Check if we need a new page
+            if (yPos > pageHeight - 60) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            // Question number and text
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            const questionText = `${index + 1}. ${q.question}`;
+            
+            // Split long questions into multiple lines
+            const questionLines = doc.splitTextToSize(questionText, 170);
+            questionLines.forEach((line, i) => {
+                if (yPos > pageHeight - 50) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                doc.text(line, margin, yPos);
+                yPos += lineHeight;
+            });
+            
+            yPos += 2;
+            
+            // Options
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const optionLabels = ['A', 'B', 'C', 'D'];
+            
+            q.options.forEach((option, optIndex) => {
+                if (yPos > pageHeight - 40) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                
+                const optionText = `   ${optionLabels[optIndex]}. ${option}`;
+                const optionLines = doc.splitTextToSize(optionText, 165);
+                
+                optionLines.forEach((line, i) => {
+                    if (yPos > pageHeight - 35) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.text(line, margin + 5, yPos);
+                    yPos += lineHeight;
+                });
+            });
+            
+            yPos += 5; // Space between questions
+        });
+        
+        // Add answer key on new page
+        doc.addPage();
+        yPos = 20;
+        
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.text('Answer Key', margin, yPos);
+        yPos += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        
+        currentQuiz.questions.forEach((q, index) => {
+            if (yPos > pageHeight - 30) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            const optionLabels = ['A', 'B', 'C', 'D'];
+            const correctAnswer = optionLabels[q.correctAnswerIndex];
+            const answerText = `${index + 1}. ${correctAnswer}`;
+            
+            doc.text(answerText, margin, yPos);
+            yPos += lineHeight;
+        });
+        
+        // Add explanations on new page
+        doc.addPage();
+        yPos = 20;
+        
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.text('Explanations', margin, yPos);
+        yPos += 10;
+        
+        currentQuiz.questions.forEach((q, index) => {
+            if (yPos > pageHeight - 50) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text(`${index + 1}. Question ${index + 1}`, margin, yPos);
+            yPos += 7;
+            
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'normal');
+            
+            const explanationLines = doc.splitTextToSize(q.explanation || 'No explanation provided', 170);
+            explanationLines.forEach((line) => {
+                if (yPos > pageHeight - 25) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                doc.text(line, margin, yPos);
+                yPos += 6;
+            });
+            
+            yPos += 5;
+        });
+        
+        // Save the PDF
+        const fileName = `${currentQuiz.topic.replace(/[^a-z0-9]/gi, '_')}_Quiz_${dateStr.replace(/\//g, '-')}.pdf`;
+        doc.save(fileName);
+        
+        showToast('Quiz downloaded as PDF successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        showToast('Failed to generate PDF. Please try again.', 'error');
+    }
 }
 
 // Load quiz documents when switching to quiz tab
