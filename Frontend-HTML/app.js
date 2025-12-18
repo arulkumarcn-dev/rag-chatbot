@@ -1065,7 +1065,20 @@ async function generateQuiz() {
     
     const btn = document.getElementById('generate-quiz-btn');
     btn.disabled = true;
-    btn.textContent = '⏳ Generating Quiz...';
+    
+    // Show different messages based on quiz size
+    let progressMessage = '⏳ Generating Quiz...';
+    if (count >= 100) {
+        progressMessage = `⏳ Generating ${count} Questions (This may take 1-2 minutes)...`;
+    } else if (count >= 50) {
+        progressMessage = `⏳ Generating ${count} Questions (This may take 30-60 seconds)...`;
+    } else if (count >= 20) {
+        progressMessage = `⏳ Generating ${count} Questions (This may take 20-30 seconds)...`;
+    } else {
+        progressMessage = `⏳ Generating ${count} Questions...`;
+    }
+    
+    btn.textContent = progressMessage;
     
     try {
         const response = await fetch(`${API_BASE_URL}/generate-quiz`, {
@@ -1090,14 +1103,14 @@ async function generateQuiz() {
         document.getElementById('quiz-results-display').style.display = 'none';
         
         // Set quiz title
-        document.getElementById('quiz-title').textContent = `Quiz: ${currentQuiz.topic}`;
+        document.getElementById('quiz-title').textContent = `Quiz: ${currentQuiz.topic} (${currentQuiz.questions.length} Questions)`;
         
         // Render all questions
         renderQuizQuestions();
         showQuestion(0);
         updateProgress();
         
-        showToast('Quiz generated successfully!', 'success');
+        showToast(`Quiz with ${currentQuiz.questions.length} questions generated successfully!`, 'success');
         
     } catch (error) {
         console.error('Error generating quiz:', error);

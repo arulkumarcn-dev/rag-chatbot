@@ -429,21 +429,53 @@ public class ChatService : IChatService
 
             // Get all documents or filter by topic
             var allChunks = await _vectorStore.GetAllChunksAsync();
-            var relevantChunks = allChunks
+            var filteredChunks = allChunks
                 .Where(c => string.IsNullOrWhiteSpace(topic) || c.DocumentName.Contains(topic, StringComparison.OrdinalIgnoreCase))
-                .Take(20) // Limit to prevent too much context
                 .ToList();
 
-            if (relevantChunks.Count == 0)
+            if (filteredChunks.Count == 0)
             {
                 throw new Exception($"No documents found for topic: {topic}");
             }
+
+            // Calculate chunks needed - more questions = more chunks for better coverage
+            // For large quizzes, sample from different parts of the document
+            int chunksNeeded = questionCount switch
+            {
+                <= 10 => Math.Min(20, filteredChunks.Count),
+                <= 20 => Math.Min(40, filteredChunks.Count),
+                <= 50 => Math.Min(100, filteredChunks.Count),
+                <= 100 => Math.Min(200, filteredChunks.Count),
+                <= 150 => Math.Min(300, filteredChunks.Count),
+                _ => Math.Min(400, filteredChunks.Count) // For 200 questions
+            };
+
+            // Sample chunks evenly across the document for maximum coverage
+            List<DocumentChunk> relevantChunks;
+            if (filteredChunks.Count <= chunksNeeded)
+            {
+                relevantChunks = filteredChunks;
+            }
+            else
+            {
+                // Sample evenly across the document
+                var step = (double)filteredChunks.Count / chunksNeeded;
+                relevantChunks = new List<DocumentChunk>();
+                for (int i = 0; i < chunksNeeded; i++)
+                {
+                    var index = (int)(i * step);
+                    relevantChunks.Add(filteredChunks[index]);
+                }
+            }
+
+            _logger.LogInformation("Selected {ChunkCount} chunks from {TotalChunks} total for {QuestionCount} questions",
+                relevantChunks.Count, filteredChunks.Count, questionCount);
 
             // Combine content from relevant chunks
             var contextParts = relevantChunks.Select(c => c.Content).ToList();
             var context = string.Join("\n\n", contextParts);
 
-            // Generate quiz using LLM
+            // Generate quiz using LLM (it will handle batching internally)
             var quiz = await _llmService.GenerateQuizAsync(context, topic, questionCount);
             
             _logger.LogInformation("Successfully generated {Count} quiz questions", quiz.Questions.Count);
