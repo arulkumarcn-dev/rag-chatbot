@@ -259,6 +259,46 @@ public class ChatService : IChatService
     {
         var questionLower = question.ToLower();
         
+        // Check for section numbers like "1.1", "2.3", etc.
+        var sectionMatch = System.Text.RegularExpressions.Regex.Match(questionLower, @"(\d+\.\d+)");
+        if (sectionMatch.Success)
+        {
+            var sectionNumber = sectionMatch.Groups[1].Value;
+            
+            // Try to find this section in the content with various patterns
+            var patterns = new[]
+            {
+                $@"{sectionNumber}[:\s-]+([^\n]+(?:\n(?!\d+\.)[^\n]+){{0,5}})",  // 1.1: content (up to 5 more lines)
+                $@"Section\s*{sectionMatch.Groups[1].Value}[:\s]+([^\n]+(?:\n(?!Section)[^\n]+){{0,5}})"  // Section 1.1: content
+            };
+            
+            foreach (var pattern in patterns)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(
+                    content, 
+                    pattern, 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Multiline
+                );
+                
+                if (match.Success)
+                {
+                    var extracted = match.Groups[1].Value.Trim();
+                    _logger.LogInformation($"Extracted section {sectionNumber}: {extracted.Substring(0, Math.Min(50, extracted.Length))}...");
+                    return $"Section {sectionNumber}: {extracted}";
+                }
+            }
+            
+            // If pattern didn't work, find the section number and extract context
+            var index = content.IndexOf(sectionNumber);
+            if (index >= 0)
+            {
+                var start = Math.Max(0, index - 50);
+                var length = Math.Min(800, content.Length - start);
+                var contextSnippet = content.Substring(start, length).Trim();
+                return contextSnippet;
+            }
+        }
+        
         // Check if asking about a specific step number
         var stepMatch = System.Text.RegularExpressions.Regex.Match(questionLower, @"step\s*(\d+)");
         if (stepMatch.Success)
@@ -284,13 +324,37 @@ public class ChatService : IChatService
                 {
                     var extracted = match.Groups[1].Value.Trim();
                     _logger.LogInformation($"Extracted step {stepNumber} from source");
-                    return $"# {stepNumber} {extracted}";
+                    return $"Step {stepNumber}: {extracted}";
                 }
             }
         }
         
-        // If no specific step requested or couldn't extract, return limited content
-        return content.Length > 500 ? content.Substring(0, 500) + "..." : content;
+        // For general queries, try to extract the most relevant sentence
+        var queryWords = questionLower.Split(new[] { ' ', '?', ',', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        var sentences = content.Split(new[] { '.', '!', '?', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        
+        // Find sentence with most query word matches
+        var bestMatch = sentences
+            .Select(s => new { 
+                Sentence = s.Trim(), 
+                Score = queryWords.Count(w => s.ToLower().Contains(w)) 
+            })
+            .Where(x => x.Score > 0 && x.Sentence.Length > 20)
+            .OrderByDescending(x => x.Score)
+            .FirstOrDefault();
+        
+        if (bestMatch != null)
+        {
+            var sentence = bestMatch.Sentence;
+            if (sentence.Length > 500)
+            {
+                return sentence.Substring(0, 500) + "...";
+            }
+            return sentence;
+        }
+        
+        // If no specific match, return beginning of content
+        return content.Length > 600 ? content.Substring(0, 600) + "..." : content;
     }
 
     public async Task<Quiz> GenerateQuizAsync(string topic, int questionCount)
