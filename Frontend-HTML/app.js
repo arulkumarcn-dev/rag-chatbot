@@ -866,7 +866,38 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Get preferred input language
-function getPreferredInputLanguage() {\n    return preferredInputLanguage;\n}\n\n// Set preferred input language\nfunction setInputLanguage(langCode) {\n    preferredInputLanguage = langCode;\n    localStorage.setItem('preferredInputLanguage', langCode);\n    if (recognition) {\n        recognition.lang = langCode;\n    }\n    showToast(`Voice input set to ${getLanguageName(langCode)}`, 'info');\n}\n\n// Load language preferences from storage\nfunction loadLanguagePreferences() {\n    const savedLang = localStorage.getItem('preferredInputLanguage');\n    if (savedLang) {\n        preferredInputLanguage = savedLang;\n    }\n    const savedAutoDetect = localStorage.getItem('autoDetectLanguage');\n    if (savedAutoDetect !== null) {\n        autoDetectLanguage = savedAutoDetect === 'true';\n    }\n}\n\n// Initialize on page load\nwindow.addEventListener('DOMContentLoaded', () => {\n    loadLanguagePreferences();\n    initializeSpeechRecognition();\n});
+function getPreferredInputLanguage() {
+    return preferredInputLanguage;
+}
+
+// Set preferred input language
+function setInputLanguage(langCode) {
+    preferredInputLanguage = langCode;
+    localStorage.setItem('preferredInputLanguage', langCode);
+    if (recognition) {
+        recognition.lang = langCode;
+    }
+    showToast(`Voice input set to ${getLanguageName(langCode)}`, 'info');
+}
+
+// Load language preferences from storage
+function loadLanguagePreferences() {
+    const savedLang = localStorage.getItem('preferredInputLanguage');
+    if (savedLang) {
+        preferredInputLanguage = savedLang;
+    }
+    const savedAutoDetect = localStorage.getItem('autoDetectLanguage');
+    if (savedAutoDetect !== null) {
+        autoDetectLanguage = savedAutoDetect === 'true';
+    }
+}
+
+// Initialize on page load
+window.addEventListener('DOMContentLoaded', () => {
+    loadLanguagePreferences();
+    initializeSpeechRecognition();
+});
+
 // Auto-speak responses when voice output is enabled
 document.addEventListener('DOMContentLoaded', function() {
     const observer = new MutationObserver(function(mutations) {
