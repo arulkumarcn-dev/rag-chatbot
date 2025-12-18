@@ -45,8 +45,8 @@ public class ChatService : IChatService
             // Generate embedding for the query
             var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(request.Message);
             
-            // Search for relevant chunks - get more for better context
-            var relevantChunks = await _vectorStore.SearchAsync(queryEmbedding, Math.Max(request.TopK, 8));
+            // Search for relevant chunks - get more to filter properly
+            var relevantChunks = await _vectorStore.SearchAsync(queryEmbedding, Math.Max(request.TopK * 2, 15));
             
             if (relevantChunks.Count == 0)
             {
@@ -62,23 +62,38 @@ public class ChatService : IChatService
                 };
             }
             
+            // FILTER OUT IMAGE-ONLY CHUNKS - prioritize text content
+            var textChunks = relevantChunks
+                .Where(c => !IsImageOnlyChunk(c.Content))
+                .Where(c => c.Content.Length > 50) // Minimum meaningful content length
+                .ToList();
+            
+            // If we filtered out too many, use original but still prefer text
+            if (textChunks.Count < 3)
+            {
+                _logger.LogWarning("Few text chunks found, using all chunks");
+                textChunks = relevantChunks.Take(10).ToList();
+            }
+            
             // Extract FULL context from chunks - don't truncate for accuracy
-            var context = relevantChunks.Select(c => c.Content).ToList();
+            var context = textChunks.Take(10).Select(c => c.Content).ToList();
             
             // For numbered section queries, try to get adjacent chunks for complete context
             if (System.Text.RegularExpressions.Regex.IsMatch(request.Message, @"\d+\.\d+"))
             {
                 _logger.LogInformation("Detected section number query, fetching more context");
-                // Get top 10 chunks for section queries to ensure we have complete content
-                relevantChunks = await _vectorStore.SearchAsync(queryEmbedding, 10);
-                context = relevantChunks.Select(c => c.Content).ToList();
+                // Get top 15 chunks for section queries to ensure we have complete content
+                var sectionChunks = await _vectorStore.SearchAsync(queryEmbedding, 15);
+                var textSectionChunks = sectionChunks.Where(c => !IsImageOnlyChunk(c.Content)).ToList();
+                context = textSectionChunks.Take(10).Select(c => c.Content).ToList();
+                textChunks = textSectionChunks;
             }
             
             // Generate response using LLM with full context
             var response = await _llmService.GenerateResponseAsync(request.Message, context);
             
-            // Build source references - show actual relevant content
-            var sources = relevantChunks.Take(5).Select((chunk, index) => new SourceReference
+            // Build source references - show actual relevant content, text only
+            var sources = textChunks.Take(5).Select((chunk, index) => new SourceReference
             {
                 DocumentName = chunk.DocumentName,
                 ChunkIndex = chunk.ChunkIndex,
@@ -364,6 +379,46 @@ public class ChatService : IChatService
         
         // If no specific match, return beginning of content
         return content.Length > 600 ? content.Substring(0, 600) + "..." : content;
+    }
+
+    private bool IsImageOnlyChunk(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) || content.Length < 20)
+            return true;
+        
+        // Check for common image-only patterns
+        var imagePatterns = new[]
+        {
+            "[Image",
+            "Figure ",
+            "Fig.",
+            "Diagram",
+            "Chart",
+            "Graph",
+            "Photo",
+            "Picture",
+            "Illustration"
+        };
+        
+        var lowerContent = content.ToLower().Trim();
+        
+        // If content is very short and contains image keywords, it's likely image-only
+        if (content.Length < 100)
+        {
+            foreach (var pattern in imagePatterns)
+            {
+                if (lowerContent.StartsWith(pattern.ToLower()) || lowerContent.Contains(pattern.ToLower() + ":"))
+                    return true;
+            }
+        }
+        
+        // Check if content is mostly numbers/special chars (likely image metadata)
+        var alphaCount = content.Count(char.IsLetter);
+        var totalCount = content.Length;
+        if (totalCount > 0 && (double)alphaCount / totalCount < 0.3)
+            return true;
+        
+        return false;
     }
 
     public async Task<Quiz> GenerateQuizAsync(string topic, int questionCount)
