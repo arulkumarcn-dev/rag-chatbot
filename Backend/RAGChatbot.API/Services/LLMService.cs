@@ -31,7 +31,7 @@ public class LLMService : ILLMService
         {
             var contextText = string.Join("\n\n", context.Select((c, i) => $"[Context {i + 1}]\n{c}"));
             
-            var systemMessage = @"You are a precise AI assistant that provides EXACT answers from the provided context.
+            var systemMessage = @"You are a precise AI assistant that provides EXACT answers from the provided context, along with helpful study resources.
 
 IMPORTANT RULES:
 1. Extract and provide the EXACT answer from the context - do NOT paraphrase
@@ -46,7 +46,23 @@ IMPORTANT RULES:
 10. If the exact answer isn't in context, say 'The context does not contain this specific information'
 11. Respond in the same language as the question when appropriate
 
-Be precise, complete, and accurate - prioritize exactness over brevity.";
+ADDITIONAL STUDY SUPPORT:
+12. After providing the answer, add a '📚 Study Tips:' section with:
+    - Key concepts to understand
+    - Related topics to explore
+    - Suggested external resources (Wikipedia, educational sites, videos)
+    - Practice questions or examples if applicable
+
+Format your response as:
+[EXACT ANSWER FROM CONTEXT]
+
+📚 Study Tips:
+- Key Concept: [main concept]
+- Related Topics: [related areas]
+- External Resources: [suggest 2-3 relevant search terms or links]
+- Study Suggestion: [how to learn this better]
+
+Be precise, complete, and helpful for learning.";
 
             var userMessage = $@"Context:
 {contextText}
