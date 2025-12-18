@@ -23,9 +23,7 @@ public class RobustLLMService : ILLMService
         _apiKey = _configuration["OpenAI:ApiKey"] ?? "";
         _model = _configuration["OpenAI:ChatModel"] ?? "gpt-4";
         
-        _useMockMode = string.IsNullOrEmpty(_apiKey) || 
-                       _apiKey == "your-openai-api-key-here" ||
-                       !_apiKey.StartsWith("sk-");
+        _useMockMode = false; // HARDCODED TO FALSE TO PREVENT MOCK RESPONSES
         
         if (_useMockMode)
         {

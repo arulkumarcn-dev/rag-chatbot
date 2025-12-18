@@ -1136,6 +1136,27 @@ function renderQuizQuestions() {
         questionText.textContent = `${index + 1}. ${q.question}`;
         questionDiv.appendChild(questionText);
         
+        // Add hint button and container
+        if (q.hint) {
+            const hintContainer = document.createElement('div');
+            hintContainer.className = 'hint-container';
+            
+            const hintButton = document.createElement('button');
+            hintButton.className = 'hint-button';
+            hintButton.textContent = '💡 Show Hint';
+            hintButton.onclick = () => toggleHint(index);
+            hintContainer.appendChild(hintButton);
+            
+            const hintText = document.createElement('div');
+            hintText.className = 'hint-text';
+            hintText.id = `hint-${index}`;
+            hintText.style.display = 'none';
+            hintText.textContent = q.hint;
+            hintContainer.appendChild(hintText);
+            
+            questionDiv.appendChild(hintContainer);
+        }
+        
         const optionsDiv = document.createElement('div');
         optionsDiv.className = 'quiz-options';
         
@@ -1175,6 +1196,14 @@ function renderQuizQuestions() {
     });
 }
 
+function toggleHint(questionIndex) {
+    const hintText = document.getElementById(`hint-${questionIndex}`);
+    if (hintText) {
+        const isVisible = hintText.style.display === 'block';
+        hintText.style.display = isVisible ? 'none' : 'block';
+    }
+}
+
 // Select answer
 function selectAnswer(questionIndex, optionIndex) {
     userAnswers[questionIndex] = optionIndex;
@@ -1188,10 +1217,34 @@ function selectAnswer(questionIndex, optionIndex) {
     const feedbackDiv = document.getElementById(`feedback-${questionIndex}`);
     const isCorrect = optionIndex === question.correctAnswerIndex;
     
+    let referencesHtml = '';
+    if (question.externalReferences && question.externalReferences.length > 0) {
+        referencesHtml = `
+            <div class="study-section">
+                <h4>External References</h4>
+                <ul>
+                    ${question.externalReferences.map(ref => `<li><a href="${ref}" target="_blank">${ref}</a></li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    let studyTipHtml = '';
+    if (question.studyTip) {
+        studyTipHtml = `
+            <div class="study-section">
+                <h4>Study Tip</h4>
+                <p>${question.studyTip}</p>
+            </div>
+        `;
+    }
+
     feedbackDiv.className = `answer-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
     feedbackDiv.innerHTML = `
         <strong>${isCorrect ? '✅ Correct!' : '❌ Incorrect'}</strong>
         <p>${question.explanation}</p>
+        ${studyTipHtml}
+        ${referencesHtml}
     `;
     feedbackDiv.style.display = 'block';
     
