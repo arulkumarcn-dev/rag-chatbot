@@ -20,7 +20,7 @@ public class DocumentProcessor : IDocumentProcessor
         _logger = logger;
     }
 
-    public async Task<string> ProcessPdfAsync(Stream fileStream, string fileName)
+    public Task<string> ProcessPdfAsync(Stream fileStream, string fileName)
     {
         try
         {
@@ -33,8 +33,11 @@ public class DocumentProcessor : IDocumentProcessor
                 fileStream.Position = 0;
             }
             
-            // Configure PDF reader to handle various encodings
+            // Configure PDF reader to handle Tamil and multilingual encodings
             var readerProperties = new ReaderProperties();
+            // Note: SetMemorySavingMode is available in iText 7.2.0+
+            // For large file support, we rely on stream processing
+            
             using var pdfReader = new PdfReader(fileStream, readerProperties);
             using var pdfDoc = new PdfDocument(pdfReader);
             
@@ -60,7 +63,7 @@ public class DocumentProcessor : IDocumentProcessor
             }
             
             _logger.LogInformation("Successfully processed PDF with {Pages} pages", totalPages);
-            return text.ToString();
+            return Task.FromResult(text.ToString());
         }
         catch (Exception ex)
         {
@@ -69,7 +72,7 @@ public class DocumentProcessor : IDocumentProcessor
         }
     }
 
-    public async Task<string> ProcessCsvAsync(Stream fileStream)
+    public Task<string> ProcessCsvAsync(Stream fileStream)
     {
         try
         {
@@ -85,7 +88,7 @@ public class DocumentProcessor : IDocumentProcessor
             
             if (records.Count == 0)
             {
-                return "Empty CSV file";
+                return Task.FromResult("Empty CSV file");
             }
             
             var headers = ((IDictionary<string, object>)records[0]).Keys.ToList();
@@ -100,7 +103,7 @@ public class DocumentProcessor : IDocumentProcessor
                 text.AppendLine();
             }
             
-            return text.ToString();
+            return Task.FromResult(text.ToString());
         }
         catch (Exception ex)
         {
@@ -109,7 +112,7 @@ public class DocumentProcessor : IDocumentProcessor
         }
     }
 
-    public async Task<string> ProcessExcelAsync(Stream fileStream)
+    public Task<string> ProcessExcelAsync(Stream fileStream)
     {
         try
         {
@@ -173,7 +176,7 @@ public class DocumentProcessor : IDocumentProcessor
             }
             
             _logger.LogInformation("Successfully processed Excel file with {Sheets} sheets", package.Workbook.Worksheets.Count);
-            return text.ToString();
+            return Task.FromResult(text.ToString());
         }
         catch (Exception ex)
         {
@@ -182,12 +185,12 @@ public class DocumentProcessor : IDocumentProcessor
         }
     }
 
-    public async Task<string> ProcessImageAsync(Stream fileStream)
+    public Task<string> ProcessImageAsync(Stream fileStream)
     {
         try
         {
             _logger.LogWarning("Image OCR not fully implemented. Consider using Google Cloud Vision API.");
-            return "Image text extraction requires Google Cloud Vision API or Tesseract configuration.";
+            return Task.FromResult("Image text extraction requires Google Cloud Vision API or Tesseract configuration.");
         }
         catch (Exception ex)
         {

@@ -50,11 +50,14 @@ public class ChatService : IChatService
             
             if (relevantChunks.Count == 0)
             {
+                // Try to generate a general response without context
+                var generalResponse = await _llmService.GenerateResponseAsync(request.Message, new List<string>());
+                
                 return new ChatResponse
                 {
                     SessionId = request.SessionId,
                     Message = request.Message,
-                    Response = "I don't have any relevant information to answer that question. Please upload some documents first.",
+                    Response = generalResponse,
                     Sources = new List<SourceReference>()
                 };
             }

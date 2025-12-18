@@ -280,22 +280,28 @@ Please provide exactly {questionCount} questions in this JSON format:
     ""question"": ""Question text here?"",
     ""options"": [""Option A"", ""Option B"", ""Option C"", ""Option D""],
     ""correctAnswerIndex"": 0,
-    ""explanation"": ""Detailed explanation of why this is the correct answer. You may include additional context from your knowledge base to help the learner understand better.""
+    ""explanation"": ""Detailed explanation with additional context and real-world applications."",
+    ""hint"": ""A helpful hint to guide thinking without revealing the answer."",
+    ""externalReferences"": [""https://example.com/topic1"", ""https://wikipedia.org/topic""],
+    ""studyTip"": ""Practical tip or mnemonic to remember this concept.""
   }}
 ]
 
-Ensure:
+IMPORTANT Requirements:
 1. Questions cover different aspects of the content
 2. Each question has 4 options
 3. Only one correct answer per question
-4. Explanations are comprehensive and educational:
-   - Explain why the correct answer is correct
-   - You may reference external knowledge or related concepts
-   - Provide additional context that helps understanding
-   - Include practical examples or real-world applications when relevant
-   - Mention related topics or concepts the learner should explore
-5. Questions are in the same language as the content
-6. Make explanations thorough enough that learners gain deeper understanding beyond just the answer";
+4. **Hint**: Provide a helpful hint that guides thinking without revealing the answer
+5. **Explanation**: Comprehensive explanation including:
+   - Why the correct answer is correct
+   - Why other options are incorrect
+   - Additional context from your knowledge
+   - Real-world applications/examples
+   - Related concepts to explore
+6. **External References**: 2-3 relevant URLs for further reading (educational sites, Wikipedia, tutorials)
+7. **Study Tip**: Practical advice, mnemonic, or memory technique
+8. Questions in the same language as content (Tamil, English, etc.)
+9. Make content thorough and educational";
 
             var request = new
             {
@@ -373,7 +379,10 @@ Ensure:
                     Question = q.Question,
                     Options = q.Options,
                     CorrectAnswerIndex = q.CorrectAnswerIndex,
-                    Explanation = q.Explanation
+                    Explanation = q.Explanation,
+                    Hint = q.Hint,
+                    ExternalReferences = q.ExternalReferences ?? new List<string>(),
+                    StudyTip = q.StudyTip
                 }).ToList(),
                 GeneratedAt = DateTime.UtcNow
             };
@@ -408,7 +417,14 @@ Ensure:
                     $"Option D for question {i}"
                 },
                 CorrectAnswerIndex = i % 4,
-                Explanation = $"This is a mock explanation for question {i}. In a real scenario with OpenAI API configured, you would get detailed explanations with external knowledge and practical examples."
+                Explanation = $"This is a mock explanation for question {i}. In a real scenario with OpenAI API configured, you would get detailed explanations with external knowledge and practical examples.",
+                Hint = $"Think about the key concepts related to {topic}.",
+                ExternalReferences = new List<string> 
+                { 
+                    "https://en.wikipedia.org",
+                    "https://www.khanacademy.org"
+                },
+                StudyTip = "Review the key concepts and practice regularly."
             });
         }
 
@@ -426,6 +442,9 @@ Ensure:
         public List<string> Options { get; set; } = new();
         public int CorrectAnswerIndex { get; set; }
         public string Explanation { get; set; } = "";
+        public string Hint { get; set; } = "";
+        public List<string>? ExternalReferences { get; set; }
+        public string StudyTip { get; set; } = "";
     }
 
     private class OpenAIChatResponse

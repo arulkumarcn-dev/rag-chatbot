@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RAG Chatbot - Login Test</title>
+    <style>
+        body { font-family: Arial; padding: 40px; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        input, button { padding: 10px; margin: 10px 0; width: 100%; font-size: 16px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #667eea; color: white; border: none; cursor: pointer; }
+        button:hover { background: #5568d3; }
+        .log { background: #f9f9f9; padding: 15px; border-left: 4px solid #667eea; margin: 20px 0; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 RAG Chatbot - Login Test</h1>
+        <p>Testing backend API connection and login functionality</p>
+        
+        <input type="text" id="username" placeholder="Username" value="admin">
+        <input type="password" id="password" placeholder="Password" value="admin123">
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="clearLog()">Clear Log</button>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/auth/login';
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            log('═══════════════════════════════════════');
+            log(`Starting login test for user: ${username}`);
+            log(`API endpoint: ${API_URL}`);
+            
+            try {
+                log('Sending POST request...');
+                
+                const requestBody = JSON.stringify({ username, password });
+                log(`Request body: ${requestBody}`);
+                
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: requestBody
+                });
+                
+                log(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
+                log(`Response ok: ${response.ok}`);
+                
+                const data = await response.json();
+                log(`Response data: ${JSON.stringify(data, null, 2)}`);
+                
+                if (data.success) {
+                    log('✓ LOGIN SUCCESSFUL!', 'success');
+                    log(`Username: ${data.username}`, 'success');
+                    log(`Token: ${data.token}`, 'success');
+                    log(`Message: ${data.message}`, 'success');
+                    
+                    setTimeout(() => {
+                        if (confirm('Login successful! Open main application?')) {
+                            window.location.href = 'index.html';
+                        }
+                    }, 1000);
+                } else {
+                    log('✗ LOGIN FAILED', 'error');
+                    log(`Message: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log('✗ ERROR OCCURRED', 'error');
+                log(`Error type: ${error.name}`, 'error');
+                log(`Error message: ${error.message}`, 'error');
+                log(`Full error: ${error.toString()}`, 'error');
+                
+                if (error.message.includes('Failed to fetch')) {
+                    log('', 'error');
+                    log('POSSIBLE CAUSES:', 'error');
+                    log('1. Backend server not running on port 5000', 'error');
+                    log('2. CORS issue (check backend CORS settings)', 'error');
+                    log('3. Network/firewall blocking connection', 'error');
+                }
+            }
+        }
+        
+        // Auto-test on load
+        log('Test page loaded');
+        log('Ready to test login');
+        log('Click "Test Login" or press Enter');
+        
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') testLogin();
+        });
+    </script>
+</body>
+</html>

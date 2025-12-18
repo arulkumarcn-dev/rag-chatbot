@@ -13,6 +13,9 @@ public class QuizQuestion
     public List<string> Options { get; set; } = new();
     public int CorrectAnswerIndex { get; set; }
     public string Explanation { get; set; } = string.Empty;
+    public string Hint { get; set; } = string.Empty;
+    public List<string> ExternalReferences { get; set; } = new();
+    public string StudyTip { get; set; } = string.Empty;
 }
 
 public class Quiz

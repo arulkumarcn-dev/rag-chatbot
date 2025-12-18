@@ -20,16 +20,25 @@ async function handleLogin(event) {
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
     
+    console.log('Login attempt:', username);
+    console.log('API URL:', `${AUTH_API_URL}/login`);
+    
     try {
+        console.log('Sending login request...');
         const response = await fetch(`${AUTH_API_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
         
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
         const data = await response.json();
+        console.log('Response data:', data);
         
         if (data.success) {
+            console.log('Login successful!');
             currentUser = data.username;
             authToken = data.token;
             
@@ -37,17 +46,42 @@ async function handleLogin(event) {
             sessionStorage.setItem('authToken', authToken);
             sessionStorage.setItem('username', currentUser);
             
-            // Show main app
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
+            console.log('Hiding login screen...');
+            console.log('Showing main app...');
             
-            initializeApp();
+            // Show main app - use try-catch to ensure it happens
+            try {
+                const loginScreen = document.getElementById('login-screen');
+                const mainApp = document.getElementById('main-app');
+                
+                if (loginScreen && mainApp) {
+                    loginScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                    console.log('✓ Page transition successful');
+                    
+                    // Initialize app with error handling
+                    try {
+                        console.log('Initializing app...');
+                        initializeApp();
+                        console.log('✓ App initialized');
+                    } catch (initError) {
+                        console.error('Error initializing app:', initError);
+                        // App still visible even if init fails
+                    }
+                } else {
+                    console.error('Cannot find login-screen or main-app elements!');
+                }
+            } catch (displayError) {
+                console.error('Error changing display:', displayError);
+            }
         } else {
-            showLoginError(data.message);
+            console.error('Login failed:', data.message);
+            showLoginError(data.message || 'Login failed');
         }
     } catch (error) {
         console.error('Login error:', error);
-        showLoginError('Login failed. Make sure the server is running.');
+        console.error('Error details:', error.message);
+        showLoginError('Cannot connect to server. Please check if backend is running on port 5000.');
     }
 }
 
@@ -92,18 +126,26 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    // Generate session ID
-    sessionId = generateUUID();
-    document.getElementById('session-id').textContent = sessionId.substring(0, 8) + '...';
-    
-    // Set language selector to stored preference
-    const langSelector = document.getElementById('voice-language');
-    if (langSelector) {
-        langSelector.value = preferredInputLanguage;
+    try {
+        // Generate session ID
+        sessionId = generateUUID();
+        const sessionIdElement = document.getElementById('session-id');
+        if (sessionIdElement) {
+            sessionIdElement.textContent = sessionId.substring(0, 8) + '...';
+        }
+        
+        // Set language selector to stored preference
+        const langSelector = document.getElementById('voice-language');
+        if (langSelector) {
+            langSelector.value = preferredInputLanguage;
+        }
+        
+        // Add welcome message
+        addMessage('bot', `Hello ${currentUser}! I'm your RAG chatbot assistant. Upload documents or video transcripts to get started, then ask me questions about them.`);
+    } catch (error) {
+        console.error('Error in initializeApp:', error);
+        // Don't throw - allow app to continue
     }
-    
-    // Add welcome message
-    addMessage('bot', `Hello ${currentUser}! I'm your RAG chatbot assistant. Upload documents or video transcripts to get started, then ask me questions about them.`);
 }
 
 // Helper: Generate UUID
@@ -198,6 +240,15 @@ function addMessage(type, content, sources = null) {
     
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
+    
+    // Detect if content contains Tamil and apply appropriate styling
+    const tamilPattern = /[\u0B80-\u0BFF]/;
+    if (tamilPattern.test(content)) {
+        contentDiv.style.fontFamily = "'Noto Sans Tamil', 'Roboto', sans-serif";
+        contentDiv.style.fontSize = '1.05em';
+        contentDiv.style.lineHeight = '1.8';
+        contentDiv.lang = 'ta';
+    }
     
     const textP = document.createElement('p');
     textP.textContent = content;
@@ -667,14 +718,48 @@ function speakResponse(text) {
     
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = language;
-    utterance.rate = 0.9; // Slightly slower for clarity
-    utterance.pitch = 1.0;
+    
+    // Adjust speech parameters based on language
+    if (language.startsWith('ta-')) {
+        utterance.rate = 0.85; // Slower for Tamil clarity
+        utterance.pitch = 1.0;
+    } else if (language.startsWith('hi-') || language.startsWith('te-') || language.startsWith('ml-')) {
+        utterance.rate = 0.88; // Slower for Indian languages
+        utterance.pitch = 1.0;
+    } else {
+        utterance.rate = 0.9; // Default rate
+        utterance.pitch = 1.0;
+    }
     utterance.volume = 1.0;
     
     // Wait for voices to load, then select appropriate voice
     function selectVoice() {
         const voices = synthesis.getVoices();
         console.log('Available voices:', voices.length);
+        
+        // For Tamil, prioritize specific voices
+        if (language === 'ta-IN') {
+            // Try Google Tamil first
+            let preferredVoice = voices.find(voice => 
+                voice.lang === 'ta-IN' && voice.name.includes('Google')
+            );
+            
+            // Try any Tamil voice
+            if (!preferredVoice) {
+                preferredVoice = voices.find(voice => voice.lang === 'ta-IN');
+            }
+            
+            // Try voices that start with 'ta'
+            if (!preferredVoice) {
+                preferredVoice = voices.find(voice => voice.lang.startsWith('ta'));
+            }
+            
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+                console.log('Using Tamil voice:', preferredVoice.name, preferredVoice.lang);
+                return;
+            }
+        }
         
         // Try to find exact language match first
         let preferredVoice = voices.find(voice => voice.lang === language);
@@ -685,11 +770,11 @@ function speakResponse(text) {
             preferredVoice = voices.find(voice => voice.lang.startsWith(langPrefix));
         }
         
-        // For Tamil and other Indian languages, prefer Google voices if available
+        // For Indian languages, prefer Google voices if available
         if (!preferredVoice && language !== 'en-US') {
             preferredVoice = voices.find(voice => 
                 voice.lang.includes(language.split('-')[0]) && 
-                voice.name.includes('Google')
+                (voice.name.includes('Google') || voice.name.includes('Microsoft'))
             );
         }
         

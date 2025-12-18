@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Force Login - RAG Chatbot</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 40px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container { 
+            max-width: 500px; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #667eea; margin-bottom: 10px; }
+        p { color: #666; margin-bottom: 30px; }
+        button { 
+            padding: 15px 30px; 
+            margin: 10px; 
+            font-size: 16px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        .btn-force { background: #667eea; color: white; }
+        .btn-normal { background: #4CAF50; color: white; }
+        .btn-test { background: #ff9800; color: white; }
+        .status { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: #f0f0f0; 
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 RAG Chatbot Access</h1>
+        <p>Quick access and debugging tools</p>
+        
+        <div id="status" class="status">
+            <div>Checking servers...</div>
+        </div>
+        
+        <button class="btn-normal" onclick="normalLogin()">
+            🔐 Normal Login Page
+        </button>
+        
+        <button class="btn-test" onclick="testLogin()">
+            🧪 Test Login API
+        </button>
+        
+        <button class="btn-force" onclick="forceLogin()">
+            ⚡ Force Login & Enter App
+        </button>
+        
+        <div style="margin-top: 30px; font-size: 12px; color: #999;">
+            Use "Force Login" if normal login isn't working
+        </div>
+    </div>
+
+    <script>
+        // Check server status
+        async function checkServers() {
+            const statusDiv = document.getElementById('status');
+            let html = '';
+            
+            // Check backend
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    html += '<div class="success">✓ Backend API: Online</div>';
+                    sessionStorage.setItem('authToken', data.token);
+                    sessionStorage.setItem('username', data.username);
+                } else {
+                    html += '<div class="error">✗ Backend API: Login Failed</div>';
+                }
+            } catch (error) {
+                html += '<div class="error">✗ Backend API: Offline</div>';
+            }
+            
+            // Check frontend
+            try {
+                const response = await fetch('http://localhost:8080/index.html');
+                if (response.ok) {
+                    html += '<div class="success">✓ Frontend: Online</div>';
+                } else {
+                    html += '<div class="error">✗ Frontend: Not Accessible</div>';
+                }
+            } catch (error) {
+                html += '<div class="error">✗ Frontend: Offline</div>';
+            }
+            
+            statusDiv.innerHTML = html;
+        }
+        
+        function normalLogin() {
+            window.location.href = 'index.html';
+        }
+        
+        function testLogin() {
+            window.location.href = 'test-login.html';
+        }
+        
+        async function forceLogin() {
+            // Check backend first
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store credentials
+                    sessionStorage.setItem('authToken', data.token);
+                    sessionStorage.setItem('username', data.username);
+                    
+                    // Redirect to main app
+                    window.location.href = 'index.html';
+                } else {
+                    alert('Login failed: ' + data.message);
+                }
+            } catch (error) {
+                alert('Cannot connect to backend server!\n\nMake sure backend is running on port 5000.\n\nError: ' + error.message);
+            }
+        }
+        
+        // Check on load
+        checkServers();
+    </script>
+</body>
+</html>
