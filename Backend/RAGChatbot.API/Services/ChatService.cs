@@ -45,8 +45,8 @@ public class ChatService : IChatService
             // Generate embedding for the query
             var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(request.Message);
             
-            // Search for relevant chunks
-            var relevantChunks = await _vectorStore.SearchAsync(queryEmbedding, request.TopK);
+            // Search for relevant chunks - get more for better context
+            var relevantChunks = await _vectorStore.SearchAsync(queryEmbedding, Math.Max(request.TopK, 8));
             
             if (relevantChunks.Count == 0)
             {
@@ -62,14 +62,23 @@ public class ChatService : IChatService
                 };
             }
             
-            // Extract context
+            // Extract FULL context from chunks - don't truncate for accuracy
             var context = relevantChunks.Select(c => c.Content).ToList();
             
-            // Generate response using LLM
+            // For numbered section queries, try to get adjacent chunks for complete context
+            if (System.Text.RegularExpressions.Regex.IsMatch(request.Message, @"\d+\.\d+"))
+            {
+                _logger.LogInformation("Detected section number query, fetching more context");
+                // Get top 10 chunks for section queries to ensure we have complete content
+                relevantChunks = await _vectorStore.SearchAsync(queryEmbedding, 10);
+                context = relevantChunks.Select(c => c.Content).ToList();
+            }
+            
+            // Generate response using LLM with full context
             var response = await _llmService.GenerateResponseAsync(request.Message, context);
             
-            // Build source references - extract specific answer if possible
-            var sources = relevantChunks.Select((chunk, index) => new SourceReference
+            // Build source references - show actual relevant content
+            var sources = relevantChunks.Take(5).Select((chunk, index) => new SourceReference
             {
                 DocumentName = chunk.DocumentName,
                 ChunkIndex = chunk.ChunkIndex,

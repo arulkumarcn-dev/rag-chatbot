@@ -31,18 +31,29 @@ public class LLMService : ILLMService
         {
             var contextText = string.Join("\n\n", context.Select((c, i) => $"[Context {i + 1}]\n{c}"));
             
-            var systemMessage = @"You are a helpful AI assistant that answers questions based on the provided context. 
-Always cite the context number when using information from it (e.g., 'According to Context 1...').
-If the context doesn't contain relevant information to answer the question, say so clearly.
-Be conversational and helpful.
-IMPORTANT: If the context contains non-English text (Tamil, Hindi, Telugu, etc.), preserve that text in your response when quoting or referencing it. Respond in the same language as the question when appropriate.";
+            var systemMessage = @"You are a precise AI assistant that provides EXACT answers from the provided context.
+
+IMPORTANT RULES:
+1. Extract and provide the EXACT answer from the context - do NOT paraphrase
+2. If a section number (like 1.1, 2.3) is mentioned, find and return that COMPLETE section
+3. For 'what is' questions, provide the complete definition/explanation from context
+4. For numbered items, return the FULL content of that item
+5. If asking about length, dimensions, or specifications, provide the EXACT value
+6. Always include relevant details, not just summaries
+7. Preserve all technical terms, numbers, and specifics exactly as in context
+8. If context is in Tamil, Hindi, Telugu, or other languages, preserve the original text exactly
+9. Cite which context number you're using (e.g., 'From Context 1:')
+10. If the exact answer isn't in context, say 'The context does not contain this specific information'
+11. Respond in the same language as the question when appropriate
+
+Be precise, complete, and accurate - prioritize exactness over brevity.";
 
             var userMessage = $@"Context:
 {contextText}
 
 Question: {prompt}
 
-Please answer the question based on the context provided above. If the question or context is in a non-English language, respond in that language.";
+Provide the EXACT, COMPLETE answer from the context above. Include all relevant details and specifications. If the question is in a non-English language, respond in that language.";
 
             var request = new
             {
@@ -52,8 +63,8 @@ Please answer the question based on the context provided above. If the question 
                     new { role = "system", content = systemMessage },
                     new { role = "user", content = userMessage }
                 },
-                temperature = 0.7,
-                max_tokens = 1000
+                temperature = 0.2,
+                max_tokens = 1500
             };
 
             var content = new StringContent(
